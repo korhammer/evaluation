@@ -20,6 +20,7 @@ class Evaluation:
         self.order_all = {}
         self.add_counter = -1
         self.allocate = allocate
+        self.patterns = [ "/" , "\\" , "|" , "-" , "+" , "x", "o", "O", ".", "*" ]
 
     def add_folder(self, path, file_method, recursive=True):
         """ Add a folder with files of a certain file type. """
@@ -67,7 +68,7 @@ class Evaluation:
     def set_all_orders(self):
         for att in self.results.columns:
             if self.order.has_key(att):
-                if isinstance(self.order[att], dict):
+                if isinstance(self.order[att], list):
                     self.order_all[att] = self.order[att]
                 elif self.order[att] is 'ascend':
                     self.order_all[att] = np.sort(self.results[att].unique())
@@ -157,7 +158,8 @@ class Evaluation:
     def group_subplots(self, best, counts=None,
                        error=False, no_rows=2,
                        adapt_bottom=True, plot_range=None, base=5, eps=.5,
-                       plot_fit=True, colormap='pastel1',
+
+                       plot_fit=True, colormap='pastel1', max_n_cols=10,
                        legend_position='lower right', legend_pad='not implemented',
                        print_value='auto'):
         """ Create a single barplot for each group of the first attribute in best.
@@ -231,10 +233,6 @@ class Evaluation:
                             ax_flat[plt_i].text(bar_x[bar_i] + .25, (test_mean + bottom) / 2, '%.2f' % train_mean,
                                             ha='center', va='top', rotation='vertical')
 
-                        if print_value is True or (print_value is not False and counts is None):
-                            ax_flat[plt_i].text(bar_x[bar_i] + .75, (test_mean + bottom) / 2, '%.2f' % test_mean,
-                                            ha='center', va='top', rotation='vertical')
-
                     else:
                         if error:
                             ax_flat[plt_i].bar(bar_x[bar_i], test_mean - bottom,
@@ -268,10 +266,285 @@ class Evaluation:
                 ax_flat[plt_i].spines['left'].set_color('gray')
                 ax_flat[plt_i].spines['bottom'].set_color('gray')
 
-        for plt_i in range(len(lev0), len(ax_flat)):
-            ax_flat[plt_i].axis('off')
+        #for plt_i in range(len(lev0), len(ax_flat)): #wrong range, doesn't do anything, why turn off anyway?
+        #    ax_flat[plt_i].axis('off')
 
         legend = [(int(att) if isinstance(att, float) else att) for i, att in lev1]
 
-        plt.figlegend(dummy_artists, legend, loc=legend_position, title=att_names[1])
+        n_col=len(legend)
+        if n_col>max_n_cols:
+            n_col=int((n_col+1)/2)
+
+        plt.figlegend(dummy_artists, legend, loc=legend_position, ncol=n_col, title=att_names[1])
+
+    def group_subplots_3(self, best, counts=None,
+                       error=False, no_rows=2,
+                       adapt_bottom=True, plot_range=None, base=5, eps=.5,
+
+                       plot_fit=True, colormap='pastel1', max_n_cols=10,
+                       legend_position='lower right', legend_pad='not implemented',
+                       print_value='auto'):
+        """ Create a single barplot for each group of the first attribute in best.
+        """
+        no_subplots = len(best.index.levels[0])
+        f, ax_arr = plt.subplots(no_rows, np.int(np.ceil(no_subplots / np.float(no_rows))))
+
+        ax_flat = ax_arr.flatten()
+
+        att_names = best.index.names
+        self.set_all_orders()
+
+        lev0 = self.bring_in_order(best.index.levels[0], att_names[0])
+        lev1 = self.bring_in_order(best.index.levels[1], att_names[1])
+        lev2 = self.bring_in_order(best.index.levels[2], att_names[2])
+
+        best = best.reset_index()
+        if counts is not None:
+            counts = counts.reset_index()
+        bar_x = np.arange(len(lev1))
+        block_x=np.arange(len(lev2))
+        width=1.0/len(lev2)
+        bar_width=.4*width
+        offset = 1
+
+        cmap = plt.cm.get_cmap(colormap)
+        dummy_artists = []
+
+        for plt_i, (lev0_ind, lev0_att) in enumerate(lev0):
+            for bar_i, (lev1_ind, lev1_att) in enumerate(lev1):
+                c = cmap(np.float(lev1_ind) / len(lev1))
+                dummy_artists.append(Rectangle((0, 0), 1, 1, fc=c))
+                for block_i, (lev2_ind, lev2_att) in enumerate(lev2):
+                    h=self.patterns[block_i]
+
+                    # compute plot limits
+                    if plot_range:
+                        bottom = plot_range[0]
+                        ceil = plot_range[1]
+                    elif adapt_bottom:
+                        relevant = best[(best[att_names[0]] == lev0_att) & -(best['test mean'] == 0)]
+                        if error:
+                            ceil = misc.based_ceil(np.max(relevant['test mean'])
+                                                   + np.max(relevant['test std']) + eps, base)
+                            bottom = misc.based_floor(np.min(relevant['test mean'])
+                                                      - np.max(relevant['test std']) - eps, base)
+                        else:
+                            ceil = misc.based_ceil(np.max(relevant['test mean']) + eps, base)
+                            bottom = misc.based_floor(np.min(relevant['test mean']) - eps, base)
+
+                    test_mean = misc.float(best[(best[att_names[0]] == lev0_att)
+                                                & (best[att_names[1]] == lev1_att)
+                                                & (best[att_names[2]] == lev2_att)]['test mean'])
+                    test_std = misc.float(best[(best[att_names[0]] == lev0_att)
+                                               & (best[att_names[1]] == lev1_att)
+                                               & (best[att_names[2]] == lev2_att)]['test std'])
+                    train_mean = misc.float(best[(best[att_names[0]] == lev0_att)
+                                                 & (best[att_names[1]] == lev1_att)
+                                                 & (best[att_names[2]] == lev2_att)]['train mean'])
+                    train_std = misc.float(best[(best[att_names[0]] == lev0_att)
+                                                & (best[att_names[1]] == lev1_att)
+                                                & (best[att_names[2]] == lev2_att)]['train std'])
+
+                    # create bar plots
+                    if (test_mean is not 0) and (test_mean is not np.nan) and (train_mean is not np.nan):
+                        if plot_fit:
+                            if error:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, train_mean - bottom, bar_width,
+                                                   color=c, hatch=h, bottom=bottom, yerr=train_std, ecolor='gray', alpha=.5,
+                                                   linewidth=0.)
+                                ax_flat[plt_i].bar(bar_x[bar_i] +block_x[block_i]*width+ bar_width, test_mean - bottom, bar_width,
+                                                   color=c, hatch=h, bottom=bottom, yerr=test_std, ecolor='gray', linewidth=0.)
+                            else:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, train_mean - bottom, bar_width,
+                                                   color=c, hatch=h, bottom=bottom, alpha=.5, linewidth=0.)
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width + bar_width, test_mean - bottom, bar_width,
+                                                   color=c, hatch=h, bottom=bottom, linewidth=0.)
+
+                            if print_value is True or (print_value is not False and counts is None):
+                                ax_flat[plt_i].text(bar_x[bar_i]+block_x[block_i]*width + .25, (test_mean + bottom) / 2, '%.2f' % train_mean,
+                                                ha='center', va='top', rotation='vertical')
+
+                        else:
+                            if error:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, test_mean - bottom,
+                                                   color=c, hatch=h, bottom=bottom, yerr=test_std, ecolor='gray', linewidth=0.)
+                            else:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, test_mean - bottom,
+                                                   color=c, hatch=h, bottom=bottom, linewidth=0.)
+
+                            if print_value is True or (print_value is not False and counts is None):
+                                ax_flat[plt_i].text(bar_x[bar_i]+block_x[block_i]*width + .5, (test_mean + bottom) / 2, '%.2f' % test_mean,
+                                                ha='center', va='center', rotation='vertical')
+
+
+                        # print count
+                        if counts is not None:
+                            count = misc.int(counts[(counts[att_names[0]] == lev0_att)
+                                                  & (counts[att_names[1]] == lev1_att)
+                                                  & (counts[att_names[2]] == lev2_att)]['test mean'])
+
+                            if count > 0:
+                                ax_flat[plt_i].text(bar_x[bar_i] +block_x[block_i]*bar_width+ .4, (test_mean + bottom) / 2, '%d' % count,
+                                                ha='center', va='center', rotation='vertical')
+
+
+
+                    ax_flat[plt_i].set_title(lev0_att)
+                    ax_flat[plt_i].set_xticks([])
+                    ax_flat[plt_i].set_ylim(bottom, ceil)
+
+                    ax_flat[plt_i].spines['top'].set_visible(False)
+                    ax_flat[plt_i].spines['right'].set_visible(False)
+                    ax_flat[plt_i].spines['left'].set_color('gray')
+                    ax_flat[plt_i].spines['bottom'].set_color('gray')
+
+            for block_i, (lev2_ind, lev2_att) in enumerate(lev2):
+                h=self.patterns[block_i]
+                dummy_artists.append(Rectangle((0, 0), 1, 1, fc='w', hatch=h))
+        #for plt_i in range(len(lev0), len(ax_flat)):  #doesn't do anything, why turn off anyway?
+        #    ax_flat[plt_i].axis('off')
+
+        legend = [(int(att) if isinstance(att, float) else att) for i, att in lev1]+[(int(att) if isinstance(att, float) else att) for i, att in lev2]
+
+        n_col=len(legend)
+        if n_col>max_n_cols:
+            n_col=int((n_col+1)/2)
+
+        plt.figlegend(dummy_artists, legend, loc=legend_position, ncol=n_col, title=att_names[1])
+
+    def group_subplots_all_parameters(self, best, counts=None,
+                       error=False, no_rows=2,
+                       adapt_bottom=True, plot_range=None, base=5, eps=.5,
+
+                       plot_fit=True, colormap='pastel1', max_n_cols=10,
+                       legend_position='lower right', legend_pad='not implemented',
+                       print_value='auto'):
+        """ Create a single barplot for each group of the first attribute in best.
+        """
+        no_subplots = len(best.index.levels[0])
+        f, ax_arr = plt.subplots(no_rows, np.int(np.ceil(no_subplots / np.float(no_rows))))
+
+        ax_flat = ax_arr.flatten()
+
+        att_names = best.index.names
+        self.set_all_orders()
+
+        lev0 = self.bring_in_order(best.index.levels[0], att_names[0])
+        lev1 = self.bring_in_order(best.index.levels[1], att_names[1])
+        lev2 = self.bring_in_order(best.index.levels[2], att_names[2])
+
+        best = best.reset_index()
+        if counts is not None:
+            counts = counts.reset_index()
+        bar_x = np.arange(len(lev1))
+        block_x=np.arange(len(lev2))
+        width=1.0/len(lev2)
+        bar_width=.4*width
+        offset = 1
+
+        cmap = plt.cm.get_cmap(colormap)
+        dummy_artists = []
+        ticks=[]
+        tick_labels=[]
+
+        for plt_i, (lev0_ind, lev0_att) in enumerate(lev0):
+            for bar_i, (lev1_ind, lev1_att) in enumerate(lev1):
+                c = cmap(np.float(lev1_ind) / len(lev1))
+                dummy_artists.append(Rectangle((0, 0), 1, 1, fc=c))
+                for block_i, (lev2_ind, lev2_att) in enumerate(lev2):
+                    # compute plot limits
+                    if plot_range:
+                        bottom = plot_range[0]
+                        ceil = plot_range[1]
+                    elif adapt_bottom:
+                        relevant = best[(best[att_names[0]] == lev0_att) & -(best['test mean'] == 0)]
+                        if error:
+                            ceil = misc.based_ceil(np.max(relevant['test mean'])
+                                                   + np.max(relevant['test std']) + eps, base)
+                            bottom = misc.based_floor(np.min(relevant['test mean'])
+                                                      - np.max(relevant['test std']) - eps, base)
+                        else:
+                            ceil = misc.based_ceil(np.max(relevant['test mean']) + eps, base)
+                            bottom = misc.based_floor(np.min(relevant['test mean']) - eps, base)
+
+                    test_mean = misc.float(best[(best[att_names[0]] == lev0_att)
+                                                & (best[att_names[1]] == lev1_att)
+                                                & (best[att_names[2]] == lev2_att)]['test mean'])
+                    test_std = misc.float(best[(best[att_names[0]] == lev0_att)
+                                               & (best[att_names[1]] == lev1_att)
+                                               & (best[att_names[2]] == lev2_att)]['test std'])
+                    train_mean = misc.float(best[(best[att_names[0]] == lev0_att)
+                                                 & (best[att_names[1]] == lev1_att)
+                                                 & (best[att_names[2]] == lev2_att)]['train mean'])
+                    train_std = misc.float(best[(best[att_names[0]] == lev0_att)
+                                                & (best[att_names[1]] == lev1_att)
+                                                & (best[att_names[2]] == lev2_att)]['train std'])
+
+                    # create bar plots
+                    if (test_mean is not 0) and (test_mean is not np.nan) and (train_mean is not np.nan):
+                        if plot_fit:
+                            if error:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, train_mean - bottom, bar_width,
+                                                   color=c, bottom=bottom, yerr=train_std, ecolor='gray', alpha=.5,
+                                                   linewidth=0.)
+                                ax_flat[plt_i].bar(bar_x[bar_i] +block_x[block_i]*width+ bar_width, test_mean - bottom, bar_width,
+                                                   color=c, bottom=bottom, yerr=test_std, ecolor='gray', linewidth=0.)
+                            else:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, train_mean - bottom, bar_width,
+                                                   color=c, bottom=bottom, alpha=.5, linewidth=0.)
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width + bar_width, test_mean - bottom, bar_width,
+                                                   color=c, bottom=bottom, linewidth=0.)
+
+                            if print_value is True or (print_value is not False and counts is None):
+                                ax_flat[plt_i].text(bar_x[bar_i]+block_x[block_i]*width + .25, (test_mean + bottom) / 2, '%.2f' % train_mean,
+                                                ha='center', va='top', rotation='vertical')
+
+                        else:
+                            if error:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, test_mean - bottom,
+                                                   color=c, bottom=bottom, yerr=test_std, ecolor='gray', linewidth=0.)
+                            else:
+                                ax_flat[plt_i].bar(bar_x[bar_i]+block_x[block_i]*width, test_mean - bottom,
+                                                   color=c, bottom=bottom, linewidth=0.)
+
+                            if print_value is True or (print_value is not False and counts is None):
+                                ax_flat[plt_i].text(bar_x[bar_i]+block_x[block_i]*width + .5, (test_mean + bottom) / 2, '%.2f' % test_mean,
+                                                ha='center', va='center', rotation='vertical', hatch=self.patterns[block_i])
+
+                        if plt_i==0:
+                            ticks.append(bar_x[bar_i]+block_x[block_i]*width+width*0.5)
+                        tick_labels+=[lev2_att]
+                        # print count
+                        if counts is not None:
+                            count = misc.int(counts[(counts[att_names[0]] == lev0_att)
+                                                  & (counts[att_names[1]] == lev1_att)
+                                                  & (counts[att_names[2]] == lev2_att)]['test mean'])
+
+                            if count > 0:
+                                ax_flat[plt_i].text(bar_x[bar_i] +block_x[block_i]*bar_width+ .4, (test_mean + bottom) / 2, '%d' % count,
+                                                ha='center', va='center', rotation='vertical')
+
+
+
+                    ax_flat[plt_i].set_title(lev0_att)
+                    ax_flat[plt_i].set_xticks([])
+                    ax_flat[plt_i].set_ylim(bottom, ceil)
+
+                    ax_flat[plt_i].spines['top'].set_visible(False)
+                    ax_flat[plt_i].spines['right'].set_visible(False)
+                    ax_flat[plt_i].spines['left'].set_color('gray')
+                    ax_flat[plt_i].spines['bottom'].set_color('gray')
+
+        for plt_i in range(len(ax_flat)):
+            #ax_flat[plt_i].axis('off')
+            ax_flat[plt_i].set_xticks( ticks )
+            ax_flat[plt_i].set_xticklabels( tick_labels, rotation=90 )
+        print 'shit'
+        legend = [(int(att) if isinstance(att, float) else att) for i, att in lev1]
+
+        n_col=len(legend)
+        if n_col>max_n_cols:
+            n_col=int((n_col+1)/2)
+
+        plt.figlegend(dummy_artists, legend, loc=legend_position, ncol=n_col, title=att_names[1])
 
