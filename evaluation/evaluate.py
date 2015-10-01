@@ -13,6 +13,8 @@ import misc
 
 import warnings
 
+def _flagify(dat, flags, delimiter):
+    return delimiter.join([flag for flag in flags if dat[flag]])
 
 class Evaluation:
     """
@@ -105,20 +107,12 @@ class Evaluation:
     def unfilter(self):
         self._fltrd = self.results
 
-    def convert_flags(self, flags, name='flags', all_unset='raw'):
-        self.results.loc[:, name] = ''
-        try:
-            for flag in flags:
-                self.results[name] += self.results[flag] * flag
-        except:
-            for flag in flags:
-                single_flag = self.results[flag].copy()
-                single_flag[single_flag != 0] = flag
-                single_flag[single_flag == 0] = ''
-                self.results.loc[:, name] += single_flag
-        single_flag = self.results[name].copy()
-        single_flag[single_flag == ''] = all_unset
-        self.results.loc[:, name] = single_flag
+    def convert_flags(self, flags, name='flags', all_unset='raw', delimiter=''):
+        self.results[name] = self.results.apply(_flagify,
+                                                   flags=flags,
+                                                   delimiter=delimiter,
+                                                   axis=1)
+        self.results.loc[self.results[name]=='', name] = all_unset
 
     def best_results_for(self, attributes,
                          objective='test mean',
