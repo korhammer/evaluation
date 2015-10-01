@@ -205,7 +205,7 @@ class Evaluation:
 
                     if adapt_bottom == 'train':
                         data_max = np.max(rlvnt[['train mean', 'test mean']]).max()
-                        data_min = np.min(rlvnt[['train mean', 'test mean']]).max()
+                        data_min = np.min(rlvnt[['train mean', 'test mean']]).min()
                     else:
                         data_max = np.max(rlvnt['test mean'])
                         data_min = np.min(rlvnt['test mean'])
