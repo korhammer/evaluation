@@ -148,6 +148,7 @@ class Evaluation:
                        error=False, no_rows=2,
                        adapt_bottom=True, plot_range=None, base=.1, eps=.05,
                        plot_fit=True, cmap='Pastel1', legend_ncol=10,
+                       justify_xlim=True,
                        legend_position='lower right',
                        legend_pad='not implemented',
                        print_value='auto',
@@ -280,6 +281,8 @@ class Evaluation:
 
                 ax.set_title(subplot_name)
                 ax.set_xticks([])
+                if justify_xlim:
+                    ax.set_xlim(0, len(bars))
                 ax.set_ylim(bottom, ceil)
 
                 ax.spines['top'].set_visible(False)
