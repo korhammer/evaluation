@@ -69,11 +69,11 @@ class Evaluation:
                 if isinstance(self._att_order_demand[att], list):
                     self._att_order[att] = self._att_order_demand[att]
                 elif self._att_order_demand[att].startswith('ascend'):
-                    self._att_order[att] = np.sort(self.results[att].unique())
+                    self._att_order[att] = list(np.sort(self.results[att].unique()))
                 elif self._att_order_demand[att].startswith('descend'):
-                    self._att_order[att] = np.sort(
+                    self._att_order[att] = list(np.sort(
                         self.results[att].unique()
-                    )[::-1]
+                    )[::-1])
                 else:
                     warnings.warn(
                         'Attribute order %s for attribute %s unknown.'
@@ -151,7 +151,8 @@ class Evaluation:
                        legend_position='lower right',
                        legend_pad='not implemented',
                        print_value='auto',
-                       legend_bbox_to_anchor=(0., 0.)):
+                       legend_bbox_to_anchor=(0., 0.),
+                       iterate_colors=1):
         """
         Create a single barplot for each group of the first attribute in best.
         """
@@ -182,11 +183,17 @@ class Evaluation:
                 relevant_results = best[(best[att_subplots] == subplot_name)
                                         & (best[att_bars] == bar_name)]
 
+                bar_color = cmap(
+                    np.float((self._att_order[att_bars].index(bar_name))
+                    * np.float(iterate_colors)
+                    / len(self._att_order[att_bars])) % 1.)
+
+                legend_dummys.append(Rectangle((0, 0), 1, 1, fc=bar_color))
+
                 if len(relevant_results) == 0:
                     continue
 
-                bar_color = cmap(np.float(i_bar) / len(bars))
-                legend_dummys.append(Rectangle((0, 0), 1, 1, fc=bar_color))
+
 
                 # compute plot limits
                 if plot_range:
