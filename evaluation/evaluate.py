@@ -30,6 +30,7 @@ class Evaluation:
         self._att_order_demand = {}
         self._att_order = {}
         self.patterns = ["/", "\\", "|", "-", "+", "x", "o", "O", ".", "*"]
+        self._color_cycl_f = {}
 
     def set_order(self, attribute, order):
         """
@@ -41,6 +42,9 @@ class Evaluation:
             raise InputError('order', order,
                              'is inconsistent with current entries')
         self._att_order_demand[attribute] = order
+
+    def set_color_cycling_factor(self, attribute, factor=1.):
+        self._color_cycl_f[attribute] = np.float(factor)
 
     def _process_demanded_att_order(self):
         """
@@ -145,7 +149,6 @@ class Evaluation:
                        legend_pad='not implemented',
                        print_value='auto',
                        legend_bbox_to_anchor=(0., 0.),
-                       iterate_colors=1):
         """
         Create a single barplot for each group of the first attribute in best.
         """
@@ -167,6 +170,10 @@ class Evaluation:
         cmap = plt.cm.get_cmap(cmap)
         legend_dummys = []
 
+        color_cycling = self._color_cycl_f[att_bars] \
+            if self._color_cycl_f.has_key(att_bars) else 1.
+
+
         for i_plt, (i_subplots, subplot_name) in enumerate(subplots):
             ax = axes_flat[i_plt]
             for bar_i, (i_bar, bar_name) in enumerate(bars):
@@ -176,7 +183,7 @@ class Evaluation:
 
                 bar_color = cmap(
                     np.float((self._att_order[att_bars].index(bar_name))
-                    * np.float(iterate_colors)
+                    * np.float(color_cycling)
                     / len(self._att_order[att_bars])) % 1.)
 
                 legend_dummys.append(Rectangle((0, 0), 1, 1, fc=bar_color))
