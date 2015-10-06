@@ -17,10 +17,11 @@ import warnings
 def _flagify(dat, flags, delimiter):
     return delimiter.join([flag for flag in flags if dat[flag]])
 
+
 class Evaluation:
     """
-    This class loads results of associated experiments and creates
-    meaningful plots to help interpret the results.
+    This class helps in creating meaningful plots to help interpret the
+    results of a series of experiments with different parameters.
     """
 
     def __init__(self):
@@ -33,7 +34,7 @@ class Evaluation:
     def set_order(self, attribute, order):
         """
         Set the order for a certain attribute to either ascending,
-        descending, or a complete given order.
+        descending, or a complete given order. Plots will be in this order.
         """
         if not (set(self.results[attribute].unique()).issubset(order)
                 or isinstance(order, str)):
@@ -41,7 +42,10 @@ class Evaluation:
                              'is inconsistent with current entries')
         self._att_order_demand[attribute] = order
 
-    def _set_order_for_all_atts(self):
+    def _process_demanded_att_order(self):
+        """
+        Process the demanded attribute orders for all attributes.
+        """
         for att in self.results.columns:
             if self._att_order_demand.has_key(att):
                 if isinstance(self._att_order_demand[att], list):
@@ -64,6 +68,9 @@ class Evaluation:
                 self._att_order[att] = self.results[att].unique()
 
     def filter(self, attribute, values, filter_type='in'):
+        """
+        Filter
+        """
         if filter_type is 'in' or 'is':
             if not isinstance(values, list):
                 values = [values]
@@ -148,7 +155,7 @@ class Evaluation:
         axes_flat = ax_arr.flatten()
 
         att_subplots, att_bars = best.index.names
-        self._set_order_for_all_atts()
+        self._process_demanded_att_order()
 
         subplots = self._bring_in_order(best.index.levels[0], att_subplots)
         bars = self._bring_in_order(best.index.levels[1], att_bars)
@@ -156,8 +163,6 @@ class Evaluation:
         best = best.reset_index()
         if counts is not None:
             counts = counts.reset_index()
-
-        # bar_x = np.arange(len(bars))
 
         cmap = plt.cm.get_cmap(cmap)
         legend_dummys = []
@@ -178,8 +183,6 @@ class Evaluation:
 
                 if len(relevant_results) == 0:
                     continue
-
-
 
                 # compute plot limits
                 if plot_range:
@@ -218,8 +221,6 @@ class Evaluation:
                              'va': 'center',
                              'rotation': 'vertical'
                              }
-
-                bar_i
 
                 if error:
                     yerr_train = train_std
