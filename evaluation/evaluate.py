@@ -44,7 +44,9 @@ class Evaluation:
         for att in self.results.columns:
             if self._att_order_demand.has_key(att):
                 if isinstance(self._att_order_demand[att], list):
-                    self._att_order[att] = self._att_order_demand[att]
+                    self._att_order[att] = [val for val in self._att_order_demand[att]
+                                            if val in self.results[att].unique()]
+                    #self._att_order[att] = self._att_order_demand[att]
                 elif self._att_order_demand[att].startswith('ascend'):
                     self._att_order[att] = list(np.sort(self.results[att].unique()))
                 elif self._att_order_demand[att].startswith('descend'):
