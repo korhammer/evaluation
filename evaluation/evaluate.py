@@ -10,6 +10,7 @@ from os.path import join, isfile, isdir
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import misc
+import itertools as it
 
 import warnings
 
@@ -92,6 +93,11 @@ class Evaluation:
                                                    delimiter=delimiter,
                                                    axis=1)
         self.results.loc[self.results[name]=='', name] = all_unset
+
+        self.set_order(name,
+                       [all_unset] +
+                       [' '.join([val for val in vals if len(val)>0])
+                        for vals in it.product(*[['', flag] for flag in flags])])
 
     def best_results_for(self, attributes,
                          objective='test mean',
