@@ -287,3 +287,24 @@ class Evaluation:
         plt.figlegend(legend_dummys, legend, loc=legend_position,
                       ncol=legend_ncol, title=att_bars,
                       bbox_to_anchor=legend_bbox_to_anchor)
+
+    def plot_hist_best_setting(self, best, figsize=[20, 10]):
+        """
+        Plots histograms of the parameter settings
+        that lead to the best results.
+        """
+        parameters = pd.DataFrame()
+        for value in best.values:
+            ind = np.where(pd.np.all(self.results[best.columns] == value, 1))
+            parameters = parameters.append(self.results.iloc[ind])
+
+        if len(parameters) > 0:
+            parameters.hist(
+                column=list(set(parameters.columns) - set(best.columns)),
+                figsize=figsize
+            )
+        else:
+            print 'I cannot find any results that match. Did you use mean as' \
+                  ' an objective?'
+
+        return parameters
