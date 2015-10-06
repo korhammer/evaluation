@@ -149,6 +149,7 @@ class Evaluation:
                        legend_pad='not implemented',
                        print_value='auto',
                        legend_bbox_to_anchor=(0., 0.),
+                       title=None):
         """
         Create a single barplot for each group of the first attribute in best.
         """
@@ -294,6 +295,9 @@ class Evaluation:
         plt.figlegend(legend_dummys, legend, loc=legend_position,
                       ncol=legend_ncol, title=att_bars,
                       bbox_to_anchor=legend_bbox_to_anchor)
+
+        if title:
+            f.suptitle(title)
 
     def plot_hist_best_setting(self, best, figsize=[20, 10]):
         """
