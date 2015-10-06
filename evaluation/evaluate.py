@@ -29,29 +29,6 @@ class Evaluation:
         self._att_order = {}
         self.patterns = ["/", "\\", "|", "-", "+", "x", "o", "O", ".", "*"]
 
-    def _get_file_names(self, path, file_ending, recusive=True):
-        file_paths = []
-        for file in listdir(path):
-            full_file_path = join(path, file)
-            if isfile(full_file_path) \
-                    and file.split('.')[-1] == file_ending:
-                add_list.append(full_file_path)
-            elif isdir(full_file_path) and recursive:
-                file_paths += self.add_folder(full_file_path,
-                                              file_ending,
-                                              recursive)
-        return file_paths
-
-    def add_folder(self, path, file_ending, recursive=True):
-        """ Add a folder with files of a certain file type. """
-        file_paths = _get_file_names(path, file_ending, recursive)
-
-        series_ = []
-        for path in file_paths:
-            series_.append(df.read_json(file_paths[0], typ='series'))
-
-        self.results.append(series_)
-
     def set_order(self, attribute, order):
         """
         Set the order for a certain attribute to either ascending,
