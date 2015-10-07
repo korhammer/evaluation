@@ -73,9 +73,9 @@ class Evaluation:
 
     def filter(self, attribute, values, filter_type='in'):
         """
-        Filter
+        Filter types: 'in', '<', '>', '<=', '>=', 'not'
         """
-        if filter_type is 'in' or 'is':
+        if filter_type == 'in' or filter_type == 'is':
             if not isinstance(values, list):
                 values = [values]
             self._fltrd = self._fltrd[self._fltrd[attribute].isin(values)]
