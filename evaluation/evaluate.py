@@ -143,6 +143,7 @@ class Evaluation:
     def group_subplots(self, best, counts=None,
                        error=False, no_rows=2,
                        adapt_bottom=True, plot_range=None, base=.1, eps=.05,
+                       consistent_scale=False,
                        plot_fit=True, cmap='Pastel1', legend_ncol=10,
                        justify_xlim=True,
                        legend_position='lower right',
@@ -283,6 +284,11 @@ class Evaluation:
                 ax.spines['right'].set_visible(False)
                 ax.spines['left'].set_color('gray')
                 ax.spines['bottom'].set_color('gray')
+
+        if consistent_scale:
+            max_range = np.max([np.diff(ax.get_ylim()) for ax in axes_flat])
+            for ax in axes_flat:
+                ax.set_ylim(np.array([0, max_range]) + ax.get_ylim()[0])
 
         # if the number of axes is larger than the number of filled subplots,
         # remove superfluous axes
